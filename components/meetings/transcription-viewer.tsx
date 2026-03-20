@@ -88,8 +88,8 @@ export function TranscriptionViewer({ meetingId, transcription, onUpdate }: Tran
   }
 
   const keyPoints = (transcription.key_points || []) as string[]
-  const clientTasks = ((transcription as Record<string, unknown>).client_tasks || []) as string[]
-  const agencyTasks = ((transcription as Record<string, unknown>).agency_tasks || []) as string[]
+  const clientTasks = ((transcription as unknown as Record<string, unknown>).client_tasks || []) as string[]
+  const agencyTasks = ((transcription as unknown as Record<string, unknown>).agency_tasks || []) as string[]
   const actionItems = (transcription.action_items || []) as string[]
 
   return (
