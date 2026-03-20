@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find client by campaign name prefix: "TAG - ..."
-    function findClientByTag(campaignName: string): string | null {
+    const findClientByTag = (campaignName: string): string | null => {
       const prefix = campaignName.split(/[\s-]/)[0].toUpperCase().trim()
       return tagMap.get(prefix) || null
     }
