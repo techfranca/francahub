@@ -237,7 +237,7 @@ export function TranscriptionViewer({ meetingId, transcription, onUpdate }: Tran
                 </Badge>
               )}
               <Badge variant="outline" className="text-xs">
-                {transcription.provider === "google_stt" ? "Google STT" : transcription.provider === "manual" ? "Manual" : "Whisper"}
+                {(transcription.provider as string) === "google_stt" ? "Google STT" : (transcription.provider as string) === "manual" ? "Manual" : "Whisper"}
               </Badge>
             </div>
           </div>
