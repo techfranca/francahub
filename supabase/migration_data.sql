@@ -1,0 +1,18 @@
+-- ============================================
+-- ESTE ARQUIVO FOI SUBSTITUÍDO PELO SCRIPT NODE
+-- ============================================
+--
+-- Como o Hub e o Francaverso usam Supabase separados,
+-- a migração de dados é feita via script Node que conecta
+-- nos dois bancos simultaneamente.
+--
+-- Para migrar:
+--   1. Configure no .env.local:
+--      FRANCAVERSO_SUPABASE_URL=...
+--      FRANCAVERSO_SUPABASE_SERVICE_KEY=...
+--
+--   2. Execute:
+--      npm run migrate:francaverso
+--
+-- O script é idempotente (pode rodar várias vezes sem duplicar).
+-- Veja: scripts/migrate-from-francaverso.ts

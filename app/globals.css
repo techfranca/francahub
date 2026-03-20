@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 152 60% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 20% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 152 60% 42%;
+    --radius: 0.75rem;
+    --chart-1: 152 60% 42%;
+    --chart-2: 217 91% 60%;
+    --chart-3: 47 96% 53%;
+    --chart-4: 262 83% 58%;
+    --chart-5: 12 76% 61%;
+    /* Light sidebar - like OFSPACE */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 215 16% 47%;
+    --sidebar-primary: 152 60% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 152 60% 96%;
+    --sidebar-accent-foreground: 152 60% 30%;
+    --sidebar-border: 220 13% 93%;
+    --sidebar-ring: 152 60% 42%;
+    --sidebar-muted: 210 20% 96%;
+  }
+
+  .dark {
+    --background: 224 47% 5%;
+    --foreground: 210 40% 98%;
+    --card: 224 47% 7%;
+    --card-foreground: 210 40% 98%;
+    --popover: 224 47% 7%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 152 58% 52%;
+    --primary-foreground: 224 47% 5%;
+    --secondary: 224 25% 12%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 224 25% 12%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 224 25% 12%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 224 25% 14%;
+    --input: 224 25% 14%;
+    --ring: 152 58% 52%;
+    --chart-1: 152 58% 52%;
+    --chart-2: 217 91% 65%;
+    --chart-3: 47 96% 58%;
+    --chart-4: 262 83% 63%;
+    --chart-5: 12 76% 65%;
+    --sidebar-background: 224 47% 7%;
+    --sidebar-foreground: 215 20% 55%;
+    --sidebar-primary: 152 58% 52%;
+    --sidebar-primary-foreground: 224 47% 5%;
+    --sidebar-accent: 224 25% 11%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 224 25% 12%;
+    --sidebar-ring: 152 58% 52%;
+    --sidebar-muted: 224 20% 15%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom scrollbar - thin & subtle */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.15);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.3);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+*:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Print styles for PDF export */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12px !important;
+  }
+
+  [data-sidebar],
+  header,
+  nav,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .shadow-md, .shadow-sm, .shadow {
+    box-shadow: none !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .print\:break-inside-avoid {
+    break-inside: avoid;
+  }
+
+  table {
+    border-collapse: collapse;
+  }
+  th, td {
+    border-bottom: 1px solid #e5e7eb;
+  }
+}

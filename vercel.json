@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sync-meta-ads",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/process-transcriptions",
+      "schedule": "0 7 * * *"
+    }
+  ]
+}
