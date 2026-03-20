@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   Plus, Loader2, Sparkles, Edit, Trash2, ExternalLink,
-  Copy, Check, Film, FileText, Megaphone, PenLine, Clapperboard
+  Copy, Check, Film, FileText, Megaphone, PenLine, Clapperboard, Upload
 } from "lucide-react"
 import { toast } from "sonner"
 import { format } from "date-fns"
@@ -72,6 +72,10 @@ export function ClientCreatives({ clientId, clientName }: Props) {
   const [showAI, setShowAI] = useState(false)
   const [aiInstrucao, setAiInstrucao] = useState("")
   const [generating, setGenerating] = useState(false)
+
+  // DOCX upload
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Edit mode in modal
   const [editing, setEditing] = useState(false)
@@ -189,6 +193,40 @@ export function ClientCreatives({ clientId, clientName }: Props) {
     setTimeout(() => setCopied(false), 1500)
   }
 
+  async function handleDocxUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      files.forEach(f => formData.append('files', f))
+
+      const res = await fetch(`/api/clients/${clientId}/creatives/upload-docx`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!res.ok) throw new Error((await res.json()).error)
+      const data = await res.json()
+
+      if (data.success > 0) {
+        toast.success(`${data.success} criativo(s) importado(s)!`)
+        fetchCreatives()
+      }
+
+      const errors = data.results?.filter((r: {error?: string}) => r.error) || []
+      if (errors.length > 0) {
+        toast.error(`${errors.length} arquivo(s) com erro`)
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Erro ao importar')
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -218,8 +256,31 @@ export function ClientCreatives({ clientId, clientName }: Props) {
           >
             <Plus className="h-4 w-4 mr-1.5" /> Novo Criativo
           </Button>
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".docx"
+              multiple
+              className="hidden"
+              onChange={handleDocxUpload}
+            />
+            <Button
+              variant="outline"
+              className="rounded-xl h-9 text-sm gap-1.5"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {uploading ? 'Importando...' : 'Importar DOCX'}
+            </Button>
+          </>
         </div>
       </div>
+      {/* Naming convention hint */}
+      <p className="text-[11px] text-muted-foreground">
+        Padrão aceito: <code className="bg-muted px-1 rounded text-[10px]">AD 01DH - [VD] Nome.docx</code> · VD=vídeo · FT=foto · CR=carrossel
+      </p>
 
       {/* Filters */}
       {creatives.length > 0 && (
@@ -262,6 +323,10 @@ export function ClientCreatives({ clientId, clientName }: Props) {
             </Button>
             <Button className="rounded-xl gap-2" onClick={() => { setShowForm(true); setShowAI(false) }}>
               <Plus className="h-4 w-4" /> Criar manualmente
+            </Button>
+            <Button variant="outline" className="rounded-xl gap-2" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {uploading ? 'Importando...' : 'Importar DOCX'}
             </Button>
           </div>
         </div>

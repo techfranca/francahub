@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { FileText, Sparkles, CheckCircle, Loader2, Send, ListChecks, Target } from "lucide-react"
+import { FileText, Sparkles, CheckCircle, Loader2, Send, ListChecks, Target, User, Building2 } from "lucide-react"
 import type { HubTranscription } from "@/types/database"
 import { toast } from "sonner"
 
@@ -23,17 +23,12 @@ export function TranscriptionViewer({ meetingId, transcription, onUpdate }: Tran
   async function saveManualTranscription() {
     if (!manualText.trim()) return
     setSaving(true)
-
     try {
       const res = await fetch(`/api/meetings/${meetingId}/transcription`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          full_text: manualText,
-          provider: "whisper",
-        }),
+        body: JSON.stringify({ full_text: manualText, provider: "manual" }),
       })
-
       if (!res.ok) throw new Error("Erro ao salvar")
       toast.success("Transcricao salva!")
       setManualText("")
@@ -48,17 +43,12 @@ export function TranscriptionViewer({ meetingId, transcription, onUpdate }: Tran
   async function processWithAI() {
     if (!transcription) return
     setProcessingAI(true)
-
     try {
-      const res = await fetch(`/api/meetings/${meetingId}/transcription/ai`, {
-        method: "POST",
-      })
-
+      const res = await fetch(`/api/meetings/${meetingId}/transcription/ai`, { method: "POST" })
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.error || "Erro ao processar")
       }
-
       toast.success("Transcricao processada pela IA!")
       onUpdate()
     } catch (err) {
@@ -68,7 +58,6 @@ export function TranscriptionViewer({ meetingId, transcription, onUpdate }: Tran
     }
   }
 
-  // No transcription yet - show input form
   if (!transcription) {
     return (
       <Card>
@@ -79,7 +68,7 @@ export function TranscriptionViewer({ meetingId, transcription, onUpdate }: Tran
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Cole a transcricao da reuniao abaixo ou faca upload de um arquivo de audio para transcricao automatica.
+            Cole a transcricao da reuniao abaixo para a IA processar e extrair os deveres de casa.
           </p>
           <Textarea
             placeholder="Cole aqui o texto completo da transcricao..."
@@ -88,11 +77,7 @@ export function TranscriptionViewer({ meetingId, transcription, onUpdate }: Tran
             className="min-h-[200px] font-mono text-sm resize-none"
           />
           <div className="flex justify-end">
-            <Button
-              onClick={saveManualTranscription}
-              disabled={saving || !manualText.trim()}
-              className="font-semibold"
-            >
+            <Button onClick={saveManualTranscription} disabled={saving || !manualText.trim()} className="font-semibold">
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
               Salvar Transcricao
             </Button>
@@ -102,13 +87,14 @@ export function TranscriptionViewer({ meetingId, transcription, onUpdate }: Tran
     )
   }
 
-  // Has transcription - show it
   const keyPoints = (transcription.key_points || []) as string[]
+  const clientTasks = ((transcription as Record<string, unknown>).client_tasks || []) as string[]
+  const agencyTasks = ((transcription as Record<string, unknown>).agency_tasks || []) as string[]
   const actionItems = (transcription.action_items || []) as string[]
 
   return (
     <div className="space-y-5">
-      {/* AI Summary Section */}
+      {/* AI Summary */}
       {transcription.summary ? (
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader className="pb-3">
@@ -126,28 +112,64 @@ export function TranscriptionViewer({ meetingId, transcription, onUpdate }: Tran
             <div>
               <p className="font-medium text-sm">Processar com IA</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Extrair pontos-chave, itens de acao e resumo automaticamente
+                Extrair resumo, pontos-chave e deveres de casa do cliente e da Franca
               </p>
             </div>
-            <Button
-              onClick={processWithAI}
-              disabled={processingAI}
-              variant="outline"
-              size="sm"
-            >
-              {processingAI ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Sparkles className="h-4 w-4 mr-2" />
-              )}
+            <Button onClick={processWithAI} disabled={processingAI} variant="outline" size="sm">
+              {processingAI ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
               Processar
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Key Points & Action Items */}
-      {(keyPoints.length > 0 || actionItems.length > 0) && (
+      {/* Deveres de Casa — split by responsible */}
+      {(clientTasks.length > 0 || agencyTasks.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {clientTasks.length > 0 && (
+            <Card className="border-blue-200 bg-blue-50/30">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2 text-blue-700">
+                  <User className="h-4 w-4" /> Deveres do Cliente
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {clientTasks.map((task, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <CheckCircle className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+                      {task}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {agencyTasks.length > 0 && (
+            <Card className="border-emerald-200 bg-emerald-50/30">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2 text-emerald-700">
+                  <Building2 className="h-4 w-4" /> Deveres da Franca
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {agencyTasks.map((task, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <CheckCircle className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
+                      {task}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Key Points */}
+      {(keyPoints.length > 0 || (actionItems.length > 0 && clientTasks.length === 0 && agencyTasks.length === 0)) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {keyPoints.length > 0 && (
             <Card>
@@ -169,7 +191,7 @@ export function TranscriptionViewer({ meetingId, transcription, onUpdate }: Tran
             </Card>
           )}
 
-          {actionItems.length > 0 && (
+          {actionItems.length > 0 && clientTasks.length === 0 && agencyTasks.length === 0 && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
@@ -191,6 +213,16 @@ export function TranscriptionViewer({ meetingId, transcription, onUpdate }: Tran
         </div>
       )}
 
+      {/* Re-process button if already processed */}
+      {transcription.summary && (
+        <div className="flex justify-end">
+          <Button onClick={processWithAI} disabled={processingAI} variant="outline" size="sm">
+            {processingAI ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+            Reprocessar com IA
+          </Button>
+        </div>
+      )}
+
       {/* Full Transcription */}
       <Card>
         <CardHeader className="pb-3">
@@ -199,17 +231,19 @@ export function TranscriptionViewer({ meetingId, transcription, onUpdate }: Tran
               <FileText className="h-4 w-4" /> Transcricao Completa
             </CardTitle>
             <div className="flex items-center gap-2">
+              {transcription.word_count && (
+                <Badge variant="outline" className="text-xs">
+                  {transcription.word_count.toLocaleString("pt-BR")} palavras
+                </Badge>
+              )}
               <Badge variant="outline" className="text-xs">
-                {transcription.word_count?.toLocaleString("pt-BR")} palavras
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                {transcription.provider === "google_stt" ? "Google STT" : "Whisper"}
+                {transcription.provider === "google_stt" ? "Google STT" : transcription.provider === "manual" ? "Manual" : "Whisper"}
               </Badge>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="bg-muted/30 rounded-lg p-4 max-h-[500px] overflow-y-auto">
+          <div className="bg-muted/30 rounded-lg p-4 max-h-[400px] overflow-y-auto">
             <p className="text-sm whitespace-pre-wrap leading-relaxed font-mono">
               {transcription.full_text}
             </p>

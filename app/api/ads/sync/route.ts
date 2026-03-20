@@ -41,10 +41,45 @@ export async function POST(request: NextRequest) {
     // 1. Sync campaigns
     const metaCampaigns = await fetchCampaigns(metaAccountId, accessToken)
 
+    // Load all clients with tags for auto-matching
+    const { data: clientsWithTags } = await supabase
+      .from('hub_clients')
+      .select('id, tag')
+      .not('tag', 'is', null)
+      .eq('ativo', true)
+
+    // Build tag → client_id map (uppercase for case-insensitive match)
+    const tagMap = new Map<string, string>()
+    for (const c of (clientsWithTags || [])) {
+      if (c.tag) tagMap.set(c.tag.toUpperCase().trim(), c.id)
+    }
+
+    // Find client by campaign name prefix: "TAG - ..."
+    function findClientByTag(campaignName: string): string | null {
+      const prefix = campaignName.split(/[\s-]/)[0].toUpperCase().trim()
+      return tagMap.get(prefix) || null
+    }
+
     let campaignsSynced = 0
     let metricsSynced = 0
+    let autoLinked = 0
 
     for (const mc of metaCampaigns) {
+      // Auto-detect client from campaign name tag
+      const detectedClientId = findClientByTag(mc.name)
+
+      // Check if campaign already exists to preserve manually set client_id
+      const { data: existing } = await supabase
+        .from('hub_campaigns')
+        .select('id, client_id')
+        .eq('ad_account_id', accountDbId)
+        .eq('meta_campaign_id', mc.id)
+        .single()
+
+      // Use existing client_id if set manually, otherwise use auto-detected
+      const clientId = existing?.client_id || detectedClientId
+      if (detectedClientId && !existing?.client_id) autoLinked++
+
       const { data: campaign } = await supabase
         .from('hub_campaigns')
         .upsert({
@@ -53,6 +88,7 @@ export async function POST(request: NextRequest) {
           name: mc.name,
           objective: mc.objective || null,
           status: mc.status,
+          client_id: clientId,
           daily_budget: mc.daily_budget ? parseFloat(mc.daily_budget) / 100 : null,
           lifetime_budget: mc.lifetime_budget ? parseFloat(mc.lifetime_budget) / 100 : null,
           updated_at: new Date().toISOString(),
@@ -113,6 +149,7 @@ export async function POST(request: NextRequest) {
       success: true,
       campaigns_synced: campaignsSynced,
       metrics_synced: metricsSynced,
+      auto_linked: autoLinked,
     })
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Erro ao sincronizar'

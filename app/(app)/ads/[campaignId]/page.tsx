@@ -11,7 +11,6 @@ import { ArrowLeft, DollarSign, Eye, MousePointer, Target, Users } from "lucide-
 import Link from "next/link"
 import { toast } from "sonner"
 import { createClient } from "@/lib/supabase/client"
-import { CreativeAnalyzer } from "@/components/ads/creative-analyzer"
 import {
   ResponsiveContainer,
   AreaChart,
@@ -279,8 +278,6 @@ export default function CampaignDetailPage() {
         </Card>
       </div>
 
-      {/* Creative Analyzer */}
-      <CreativeAnalyzer campaignId={campaignId} />
     </div>
   )
 }

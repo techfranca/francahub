@@ -26,6 +26,7 @@ import { ClientMeetings } from "@/components/meetings/client-meetings"
 import { ClientCampaigns } from "@/components/ads/client-campaigns"
 import { ClientInsights } from "@/components/insights/client-insights"
 import { ClientCreatives } from "@/components/clients/client-creatives"
+import { ClientWebsite } from "@/components/clients/client-website"
 import { useRealtimeTables } from "@/lib/supabase/realtime"
 import { toast } from "sonner"
 import Link from "next/link"
@@ -620,6 +621,9 @@ export default function ClientDetailPage() {
             <TabsTrigger value="creatives" className="rounded-xl data-[state=active]:shadow-sm px-4 text-sm font-medium">
               <Smartphone className="h-4 w-4 mr-1.5" /> Criativos
             </TabsTrigger>
+            <TabsTrigger value="website" className="rounded-xl data-[state=active]:shadow-sm px-4 text-sm font-medium">
+              <Globe className="h-4 w-4 mr-1.5" /> Sites
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -692,6 +696,14 @@ export default function ClientDetailPage() {
           <Card className="shadow-card border-transparent">
             <CardContent className="p-6">
               <ClientCreatives clientId={clientId} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="website" className="mt-0">
+          <Card className="shadow-card border-transparent">
+            <CardContent className="p-6">
+              <ClientWebsite clientId={clientId} />
             </CardContent>
           </Card>
         </TabsContent>

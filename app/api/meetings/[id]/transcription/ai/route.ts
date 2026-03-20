@@ -47,6 +47,8 @@ export async function POST(
       .update({
         key_points: result.key_points,
         action_items: result.action_items,
+        client_tasks: result.client_tasks,
+        agency_tasks: result.agency_tasks,
         summary: result.summary,
         ai_processed_at: new Date().toISOString(),
       })
@@ -68,7 +70,7 @@ export async function POST(
       user_id: user.id,
       event_type: 'ai_insight_generated',
       title: `IA processou reuniao: ${meeting.title}`,
-      description: `${result.key_points.length} pontos-chave, ${result.action_items.length} itens de acao extraidos`,
+      description: `${result.key_points.length} pontos-chave, ${result.client_tasks.length} tarefas do cliente, ${result.agency_tasks.length} tarefas da Franca extraidas`,
     })
 
     return NextResponse.json({

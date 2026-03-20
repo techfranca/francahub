@@ -53,11 +53,13 @@ export async function callClaude({
 }
 
 /**
- * Process a meeting transcription: extract key points, action items, and summary.
+ * Process a meeting transcription: extract key points, action items split by responsible, and summary.
  */
 export async function processTranscription(fullText: string, meetingTitle: string): Promise<{
   key_points: string[]
   action_items: string[]
+  client_tasks: string[]
+  agency_tasks: string[]
   summary: string
 }> {
   const response = await callClaude({
@@ -70,7 +72,11 @@ Responda SOMENTE em JSON valido, sem markdown, sem code blocks.`,
         content: `Analise a transcricao da reuniao "${meetingTitle}" e retorne um JSON com:
 - "summary": resumo executivo da reuniao (2-4 frases)
 - "key_points": array de strings com os pontos principais discutidos (maximo 8)
-- "action_items": array de strings com itens de acao identificados (maximo 10)
+- "action_items": array de strings com TODOS os itens de acao (maximo 10)
+- "client_tasks": array de strings com tarefas/deveres do CLIENTE (coisas que o cliente precisa fazer, enviar, providenciar ou decidir)
+- "agency_tasks": array de strings com tarefas/deveres da AGENCIA Franca Assessoria (coisas que a equipe da Franca precisa executar, criar, entregar ou acompanhar)
+
+Importante: "client_tasks" e "agency_tasks" sao subconjuntos de "action_items", separados por responsavel.
 
 Transcricao:
 ${fullText.slice(0, 50000)}`,
@@ -80,7 +86,6 @@ ${fullText.slice(0, 50000)}`,
   })
 
   try {
-    // Try to parse the JSON response, handling potential markdown wrapping
     let jsonStr = response.trim()
     if (jsonStr.startsWith('```')) {
       jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '')
@@ -89,13 +94,16 @@ ${fullText.slice(0, 50000)}`,
     return {
       key_points: parsed.key_points || [],
       action_items: parsed.action_items || [],
+      client_tasks: parsed.client_tasks || [],
+      agency_tasks: parsed.agency_tasks || [],
       summary: parsed.summary || '',
     }
   } catch {
-    // Fallback if JSON parsing fails
     return {
       key_points: [],
       action_items: [],
+      client_tasks: [],
+      agency_tasks: [],
       summary: response.slice(0, 500),
     }
   }

@@ -39,6 +39,8 @@ export async function PATCH(
     'servicos_contratados', 'valor_servico', 'dia_pagamento',
     'modelo_pagamento', 'faturamento_medio', 'data_inicio', 'data_encerramento',
     'pasta_drive', 'avatar_url', 'website_url',
+    'website_cms', 'website_hosting', 'website_hosting_expiry',
+    'website_domain_registrar', 'website_domain_expiry', 'website_ssl', 'website_notes',
   ]
   const cleanData: Record<string, unknown> = {}
   for (const key of allowedFields) {
