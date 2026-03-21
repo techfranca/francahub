@@ -2,6 +2,30 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { decryptToken, fetchCampaigns, fetchCampaignInsights } from '@/lib/integrations/meta-ads'
 
+function normalizeAutoLinkKey(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/^[^A-Z0-9]+|[^A-Z0-9]+$/gi, '')
+    .toUpperCase()
+    .trim()
+}
+
+function extractCampaignTagCandidates(campaignName: string): string[] {
+  const cleaned = campaignName.trim()
+  const leadingMatch = cleaned.match(/^[^A-Za-z0-9]*([A-Za-z0-9]+)/)
+  const firstChunk = cleaned.split(/\s*(?:-|–|—|_|\/|\\|\||:)\s*|\s+/)[0]
+
+  return Array.from(
+    new Set(
+      [leadingMatch?.[1], firstChunk]
+        .filter((value): value is string => Boolean(value))
+        .map(normalizeAutoLinkKey)
+        .filter(Boolean)
+    )
+  )
+}
+
 /**
  * POST /api/ads/sync
  *
@@ -42,22 +66,38 @@ export async function POST(request: NextRequest) {
     const metaCampaigns = await fetchCampaigns(metaAccountId, accessToken)
 
     // Load all clients with tags for auto-matching
-    const { data: clientsWithTags } = await supabase
+    const { data: clientsWithTags, error: clientsErr } = await supabase
       .from('hub_clients')
       .select('id, tag')
       .not('tag', 'is', null)
-      .eq('ativo', true)
+      .eq('status', 'Ativo')
+
+    if (clientsErr) {
+      throw new Error('Erro ao carregar clientes para auto-link')
+    }
 
     // Build tag → client_id map (uppercase for case-insensitive match)
     const tagMap = new Map<string, string>()
     for (const c of (clientsWithTags || [])) {
-      if (c.tag) tagMap.set(c.tag.toUpperCase().trim(), c.id)
+      if (!c.tag) continue
+
+      const aliases = c.tag
+        .split(/[;,|/]+/)
+        .map(normalizeAutoLinkKey)
+        .filter(Boolean)
+
+      for (const alias of aliases) {
+        if (!tagMap.has(alias)) tagMap.set(alias, c.id)
+      }
     }
 
     // Find client by campaign name prefix: "TAG - ..."
     const findClientByTag = (campaignName: string): string | null => {
-      const prefix = campaignName.split(/[\s-]/)[0].toUpperCase().trim()
-      return tagMap.get(prefix) || null
+      for (const candidate of extractCampaignTagCandidates(campaignName)) {
+        const clientId = tagMap.get(candidate)
+        if (clientId) return clientId
+      }
+      return null
     }
 
     let campaignsSynced = 0

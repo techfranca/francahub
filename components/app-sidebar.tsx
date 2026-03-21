@@ -13,10 +13,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar"
 import {
+  ChevronLeft,
+  ChevronRight,
   Users,
   LayoutDashboard,
   Video,
@@ -28,8 +29,6 @@ import {
   UsersRound,
   Key,
   GraduationCap,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
@@ -81,8 +80,8 @@ interface UserInfo {
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { state, toggleSidebar } = useSidebar()
   const [user, setUser] = useState<UserInfo | null>(null)
-  const { open } = useSidebar()
 
   useEffect(() => {
     async function loadUser() {
@@ -113,7 +112,17 @@ export function AppSidebar() {
   const initials = (user?.name || "U").split(" ").map(w => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase()
 
   return (
-    <Sidebar variant="sidebar" collapsible="icon">
+    <Sidebar variant="sidebar" collapsible="offcanvas" className="overflow-visible">
+      <button
+        type="button"
+        onClick={toggleSidebar}
+        aria-label={state === "expanded" ? "Minimizar sidebar" : "Reabrir sidebar"}
+        title={state === "expanded" ? "Minimizar sidebar" : "Reabrir sidebar"}
+        className="absolute right-[-16px] top-1/2 z-30 hidden h-12 w-8 -translate-y-1/2 items-center justify-center rounded-r-xl border border-l-0 border-border/70 bg-background/95 text-muted-foreground shadow-md shadow-black/5 backdrop-blur transition-all duration-200 hover:bg-muted hover:text-foreground md:flex"
+      >
+        {state === "expanded" ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+      </button>
+
       <SidebarHeader className="p-5 pb-2">
         <Link href="/dashboard" className="flex items-center gap-3 group">
           <Image
@@ -234,14 +243,6 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarFooter>
 
-      {/* Collapse toggle — centro da borda direita da sidebar */}
-      <SidebarTrigger className="absolute top-1/2 -right-3.5 -translate-y-1/2 z-50 w-7 h-7 rounded-full border border-border bg-background shadow-md text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150 flex items-center justify-center">
-        {open ? (
-          <ChevronLeft className="h-3.5 w-3.5 shrink-0" />
-        ) : (
-          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-        )}
-      </SidebarTrigger>
     </Sidebar>
   )
 }

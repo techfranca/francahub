@@ -5,7 +5,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Shield, Key, Globe, Eye, EyeOff, Copy, Check, Plus, Trash2, Loader2 } from "lucide-react"
+import {
+  Check,
+  Copy,
+  Eye,
+  EyeOff,
+  Globe,
+  Key,
+  Loader2,
+  Plus,
+  Shield,
+  Trash2,
+} from "lucide-react"
 import { getPlatformStyle, platformSuggestions, defaultPlatforms } from "@/lib/constants"
 import type { HubCredential } from "@/types/database"
 import { toast } from "sonner"
@@ -19,19 +30,20 @@ interface CredentialsVaultProps {
 
 export function CredentialsVault({ credentials, clientId, clientSegment, onUpdate }: CredentialsVaultProps) {
   const [visiblePasswords, setVisiblePasswords] = useState<Record<string, boolean>>({})
-  const [showAddForm, setShowAddForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
-
-  // New credential form state
   const [newPlatform, setNewPlatform] = useState("")
   const [newLogin, setNewLogin] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [newNotes, setNewNotes] = useState("")
   const [newType, setNewType] = useState<"standard" | "custom">("standard")
 
+  const suggestions = [...defaultPlatforms, ...(platformSuggestions[clientSegment] || [])]
+  const standardCredentials = credentials.filter((credential) => credential.credential_type === "standard")
+  const customCredentials = credentials.filter((credential) => credential.credential_type === "custom")
+
   const togglePasswordVisibility = (id: string) => {
-    setVisiblePasswords(prev => ({ ...prev, [id]: !prev[id] }))
+    setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }))
   }
 
   const copyToClipboard = async (text: string, type: string) => {
@@ -43,28 +55,21 @@ export function CredentialsVault({ credentials, clientId, clientSegment, onUpdat
     }
   }
 
-  // Platform suggestions based on segment
-  const suggestions = [
-    ...defaultPlatforms,
-    ...(platformSuggestions[clientSegment] || []),
-  ]
-
   async function handleAdd() {
     if (!newPlatform.trim()) {
-      toast.error("Nome da plataforma é obrigatório")
+      toast.error("Nome da plataforma e obrigatorio")
       return
     }
 
     setSaving(true)
     try {
-      // Send all existing + new credential
       const allCredentials = [
-        ...credentials.map(c => ({
-          credential_type: c.credential_type,
-          platform_name: c.platform_name,
-          login: c.login,
-          password: c.password,
-          notes: c.notes,
+        ...credentials.map((credential) => ({
+          credential_type: credential.credential_type,
+          platform_name: credential.platform_name,
+          login: credential.login,
+          password: credential.password,
+          notes: credential.notes,
         })),
         {
           credential_type: newType,
@@ -75,13 +80,13 @@ export function CredentialsVault({ credentials, clientId, clientSegment, onUpdat
         },
       ]
 
-      const res = await fetch(`/api/clients/${clientId}/credentials`, {
+      const response = await fetch(`/api/clients/${clientId}/credentials`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(allCredentials),
       })
 
-      if (!res.ok) throw new Error("Erro ao salvar")
+      if (!response.ok) throw new Error("Erro ao salvar")
 
       toast.success("Acesso adicionado!")
       setNewPlatform("")
@@ -89,7 +94,6 @@ export function CredentialsVault({ credentials, clientId, clientSegment, onUpdat
       setNewPassword("")
       setNewNotes("")
       setNewType("standard")
-      setShowAddForm(false)
       onUpdate()
     } catch {
       toast.error("Erro ao adicionar acesso")
@@ -104,22 +108,22 @@ export function CredentialsVault({ credentials, clientId, clientSegment, onUpdat
     setDeleting(credentialId)
     try {
       const remaining = credentials
-        .filter(c => c.id !== credentialId)
-        .map(c => ({
-          credential_type: c.credential_type,
-          platform_name: c.platform_name,
-          login: c.login,
-          password: c.password,
-          notes: c.notes,
+        .filter((credential) => credential.id !== credentialId)
+        .map((credential) => ({
+          credential_type: credential.credential_type,
+          platform_name: credential.platform_name,
+          login: credential.login,
+          password: credential.password,
+          notes: credential.notes,
         }))
 
-      const res = await fetch(`/api/clients/${clientId}/credentials`, {
+      const response = await fetch(`/api/clients/${clientId}/credentials`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(remaining),
       })
 
-      if (!res.ok) throw new Error("Erro ao remover")
+      if (!response.ok) throw new Error("Erro ao remover")
 
       toast.success("Acesso removido")
       onUpdate()
@@ -130,174 +134,190 @@ export function CredentialsVault({ credentials, clientId, clientSegment, onUpdat
     }
   }
 
-  const standardCredentials = credentials.filter(c => c.credential_type === "standard")
-  const customCredentials = credentials.filter(c => c.credential_type === "custom")
-
   return (
     <div className="space-y-6">
-      {/* Header with Add button */}
-      <div className="flex items-center justify-between pb-4 border-b">
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center">
-            <Shield className="h-5 w-5 text-emerald-600" />
-          </div>
-          <div>
-            <h3 className="text-base font-semibold">Cofre de Acessos</h3>
-            <p className="text-sm text-muted-foreground">
-              {credentials.length > 0 ? `${credentials.length} credencial(is) salva(s)` : "Nenhum acesso cadastrado"}
-            </p>
-          </div>
-        </div>
-        <Button
-          onClick={() => setShowAddForm(!showAddForm)}
-          variant={showAddForm ? "ghost" : "default"}
-          className="rounded-xl h-9 text-sm"
-        >
-          {showAddForm ? "Cancelar" : (
-            <>
-              <Plus className="h-4 w-4 mr-1.5" />
-              Adicionar Acesso
-            </>
-          )}
-        </Button>
-      </div>
-
-      {/* Add Form */}
-      {showAddForm && (
-        <div className="bg-muted/30 border border-border/50 rounded-xl p-5 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Plataforma *</Label>
-              <div className="space-y-2">
-                <Input
-                  placeholder="Nome da plataforma"
-                  value={newPlatform}
-                  onChange={(e) => setNewPlatform(e.target.value)}
-                  className="rounded-xl h-10"
-                />
-                {/* Quick suggestions */}
-                <div className="flex flex-wrap gap-1.5">
-                  {suggestions.slice(0, 8).map(s => (
-                    <button
-                      key={s}
-                      onClick={() => setNewPlatform(s)}
-                      className={`text-[11px] font-medium px-2.5 py-1 rounded-lg border transition-colors cursor-pointer ${
-                        newPlatform === s
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-white border-border/50 text-muted-foreground hover:border-primary/30 hover:text-foreground"
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
+      <div className="overflow-hidden rounded-[24px] border border-emerald-200/70 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_48%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(236,253,245,0.94))] p-5 lg:p-6">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+          <div className="max-w-2xl">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/10">
+                <Shield className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold tracking-tight">Cofre de acessos</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  Cadastre novos acessos no topo e use toda a largura para consultar os cards sem deixar informacao importante espremida.
+                </p>
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Tipo</Label>
-              <Select value={newType} onValueChange={(v) => setNewType(v as "standard" | "custom")}>
-                <SelectTrigger className="rounded-xl h-10">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="standard">Padrao</SelectItem>
-                  <SelectItem value="custom">Especifico do segmento</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Login</Label>
-              <Input
-                placeholder="E-mail, usuario ou telefone"
-                value={newLogin}
-                onChange={(e) => setNewLogin(e.target.value)}
-                className="rounded-xl h-10"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Senha</Label>
-              <Input
-                placeholder="Senha de acesso"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                type="password"
-                className="rounded-xl h-10"
-              />
-            </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[380px]">
+            <MetricCard label="Total" value={String(credentials.length)} tone="emerald" />
+            <MetricCard label="Padrao" value={String(standardCredentials.length)} tone="slate" />
+            <MetricCard label="Especifico" value={String(customCredentials.length)} tone="violet" />
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium">Observacoes</Label>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-12">
+          <div className="space-y-1.5 xl:col-span-4">
+            <Label className="text-xs font-medium">Plataforma *</Label>
             <Input
-              placeholder="Alguma informacao extra sobre este acesso..."
-              value={newNotes}
-              onChange={(e) => setNewNotes(e.target.value)}
-              className="rounded-xl h-10"
+              placeholder="Nome da plataforma"
+              value={newPlatform}
+              onChange={(event) => setNewPlatform(event.target.value)}
+              className="h-11 rounded-2xl bg-white"
+            />
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {suggestions.slice(0, 8).map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={() => setNewPlatform(suggestion)}
+                  className={`cursor-pointer rounded-full border px-2.5 py-1 text-[11px] font-medium transition-all ${
+                    newPlatform === suggestion
+                      ? "border-emerald-600 bg-emerald-600 text-white"
+                      : "border-border/60 bg-white text-muted-foreground hover:border-emerald-300 hover:text-foreground"
+                  }`}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1.5 xl:col-span-2">
+            <Label className="text-xs font-medium">Tipo</Label>
+            <Select value={newType} onValueChange={(value) => setNewType(value as "standard" | "custom")}>
+              <SelectTrigger className="h-11 rounded-2xl bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="standard">Padrao</SelectItem>
+                <SelectItem value="custom">Especifico</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5 xl:col-span-3">
+            <Label className="text-xs font-medium">Login</Label>
+            <Input
+              placeholder="E-mail, usuario ou telefone"
+              value={newLogin}
+              onChange={(event) => setNewLogin(event.target.value)}
+              className="h-11 rounded-2xl bg-white"
             />
           </div>
-          <Button onClick={handleAdd} disabled={saving || !newPlatform.trim()} className="rounded-xl h-10">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-            Salvar Acesso
-          </Button>
-        </div>
-      )}
 
-      {/* Empty state */}
-      {credentials.length === 0 && !showAddForm && (
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-5">
-            <Shield className="h-8 w-8 text-emerald-600" />
+          <div className="space-y-1.5 xl:col-span-3">
+            <Label className="text-xs font-medium">Senha</Label>
+            <Input
+              placeholder="Senha de acesso"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              type="password"
+              className="h-11 rounded-2xl bg-white"
+            />
           </div>
-          <h3 className="text-lg font-semibold mb-1">Nenhum acesso cadastrado</h3>
-          <p className="text-muted-foreground text-sm mb-4">Adicione credenciais de acesso para este cliente</p>
-          <Button onClick={() => setShowAddForm(true)} className="rounded-xl">
-            <Plus className="h-4 w-4 mr-2" /> Adicionar Acesso
-          </Button>
-        </div>
-      )}
 
-      {/* Standard Credentials */}
-      {standardCredentials.length > 0 && (
-        <div>
-          <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
-            <Key className="h-3.5 w-3.5" /> Acessos Padrao
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {standardCredentials.map((cred) => (
-              <CredentialCard
-                key={cred.id}
-                credential={cred}
-                isVisible={visiblePasswords[cred.id] || false}
-                isDeleting={deleting === cred.id}
-                onToggleVisibility={() => togglePasswordVisibility(cred.id)}
-                onCopy={copyToClipboard}
-                onDelete={() => handleDelete(cred.id)}
-              />
-            ))}
+          <div className="space-y-1.5 md:col-span-2 xl:col-span-9">
+            <Label className="text-xs font-medium">Observacoes</Label>
+            <Input
+              placeholder="Informacao extra sobre este acesso"
+              value={newNotes}
+              onChange={(event) => setNewNotes(event.target.value)}
+              className="h-11 rounded-2xl bg-white"
+            />
+          </div>
+
+          <div className="flex items-end md:col-span-2 xl:col-span-3">
+            <Button onClick={handleAdd} disabled={saving || !newPlatform.trim()} className="h-11 w-full rounded-2xl">
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              Salvar acesso
+            </Button>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* Custom Credentials */}
-      {customCredentials.length > 0 && (
-        <div>
-          <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
-            <Globe className="h-3.5 w-3.5" /> Acessos Especificos {clientSegment && `(${clientSegment})`}
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {customCredentials.map((cred) => (
-              <CredentialCard
-                key={cred.id}
-                credential={cred}
-                isVisible={visiblePasswords[cred.id] || false}
-                isDeleting={deleting === cred.id}
-                onToggleVisibility={() => togglePasswordVisibility(cred.id)}
-                onCopy={copyToClipboard}
-                onDelete={() => handleDelete(cred.id)}
-              />
-            ))}
+      {credentials.length === 0 ? (
+        <div className="flex flex-col items-center justify-center rounded-[24px] border border-dashed border-border/60 bg-muted/20 px-6 py-16 text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10">
+            <Shield className="h-6 w-6 text-emerald-600/70" />
           </div>
+          <p className="text-base font-medium text-foreground">Nenhum acesso cadastrado ainda</p>
+          <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+            O formulario acima ja esta pronto para voce cadastrar a primeira credencial sem depender de um painel lateral.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {standardCredentials.length > 0 && (
+            <section className="space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-500/10">
+                    <Key className="h-4 w-4 text-slate-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold">Acessos padrao</h4>
+                    <p className="text-xs text-muted-foreground">Plataformas recorrentes do cliente</p>
+                  </div>
+                </div>
+                <span className="w-fit rounded-full bg-slate-500/10 px-2.5 py-1 text-[11px] font-semibold text-slate-700">
+                  {standardCredentials.length} item(ns)
+                </span>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {standardCredentials.map((credential) => (
+                  <CredentialCard
+                    key={credential.id}
+                    credential={credential}
+                    isVisible={visiblePasswords[credential.id] || false}
+                    isDeleting={deleting === credential.id}
+                    onToggleVisibility={() => togglePasswordVisibility(credential.id)}
+                    onCopy={copyToClipboard}
+                    onDelete={() => handleDelete(credential.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {customCredentials.length > 0 && (
+            <section className="space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/10">
+                    <Globe className="h-4 w-4 text-violet-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold">Acessos especificos</h4>
+                    <p className="text-xs text-muted-foreground">
+                      {clientSegment ? `Relacionados ao segmento ${clientSegment}` : "Credenciais fora do pacote padrao"}
+                    </p>
+                  </div>
+                </div>
+                <span className="w-fit rounded-full bg-violet-500/10 px-2.5 py-1 text-[11px] font-semibold text-violet-700">
+                  {customCredentials.length} item(ns)
+                </span>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {customCredentials.map((credential) => (
+                  <CredentialCard
+                    key={credential.id}
+                    credential={credential}
+                    isVisible={visiblePasswords[credential.id] || false}
+                    isDeleting={deleting === credential.id}
+                    onToggleVisibility={() => togglePasswordVisibility(credential.id)}
+                    onCopy={copyToClipboard}
+                    onDelete={() => handleDelete(credential.id)}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       )}
     </div>
@@ -322,92 +342,135 @@ function CredentialCard({
   const [copiedField, setCopiedField] = useState<string | null>(null)
   const { icon: PlatformIcon, bgColor } = getPlatformStyle(credential.platform_name)
 
-  const handleCopy = (text: string, type: string) => {
-    onCopy(text, type)
-    setCopiedField(type)
+  async function handleCopy(value: string, field: "Login" | "Senha") {
+    await onCopy(value, field)
+    setCopiedField(field)
     setTimeout(() => setCopiedField(null), 1500)
   }
 
   return (
-    <div className="bg-card border rounded-xl p-5 hover:shadow-md hover:border-primary/20 transition-all duration-200 group/card relative">
-      {/* Delete button */}
+    <div className="group/card relative rounded-[22px] border border-border/60 bg-white p-4 shadow-sm shadow-slate-950/5 transition-all duration-200 hover:border-border hover:shadow-md">
       <button
+        type="button"
         onClick={onDelete}
         disabled={isDeleting}
-        className="absolute top-3 right-3 p-1.5 rounded-lg opacity-0 group-hover/card:opacity-100 hover:bg-red-50 text-muted-foreground hover:text-destructive transition-all cursor-pointer"
+        className="absolute right-3 top-3 rounded-lg p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-red-50 hover:text-destructive group-hover/card:opacity-100"
       >
-        {isDeleting ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <Trash2 className="h-3.5 w-3.5" />
-        )}
+        {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
       </button>
 
-      <div className="flex items-center gap-3 mb-4">
-        <div className={`w-9 h-9 ${bgColor} rounded-lg flex items-center justify-center`}>
+      <div className="mb-4 flex items-center gap-3">
+        <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${bgColor}`}>
           <PlatformIcon className="h-4 w-4 text-white" />
         </div>
-        <div>
-          <h5 className="font-semibold text-sm">{credential.platform_name}</h5>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{credential.platform_name}</p>
           <p className="text-[11px] text-muted-foreground">
-            {credential.credential_type === "standard" ? "Padrao" : "Especifico"}
+            {credential.credential_type === "custom" ? "Especifico" : "Padrao"}
           </p>
         </div>
       </div>
 
-      <div className="mb-3">
-        <label className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">Login</label>
-        <div className="flex items-center gap-1.5">
-          <div className="flex-1 bg-muted/50 rounded-lg px-3 py-2 text-sm font-mono truncate border border-border/50">
-            {credential.login || "-"}
-          </div>
-          {credential.login && (
-            <button
-              onClick={() => handleCopy(credential.login!, "Login")}
-              className="p-2 hover:bg-muted rounded-lg transition-colors shrink-0 cursor-pointer"
-            >
-              {copiedField === "Login" ? (
-                <Check className="h-3.5 w-3.5 text-emerald-500" />
-              ) : (
-                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-              )}
-            </button>
-          )}
-        </div>
-      </div>
+      <FieldRow
+        label="Login"
+        value={credential.login}
+        copied={copiedField === "Login"}
+        onCopy={credential.login ? () => handleCopy(credential.login!, "Login") : undefined}
+      />
 
-      <div className="mb-3">
-        <label className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium mb-1.5 block">Senha</label>
-        <div className="flex items-center gap-1.5">
-          <div className="flex-1 bg-muted/50 rounded-lg px-3 py-2 text-sm font-mono truncate border border-border/50">
-            {credential.password ? (isVisible ? credential.password : "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022") : "-"}
-          </div>
-          {credential.password && (
-            <>
-              <button onClick={onToggleVisibility} className="p-2 hover:bg-muted rounded-lg transition-colors shrink-0 cursor-pointer">
-                {isVisible ? <EyeOff className="h-3.5 w-3.5 text-muted-foreground" /> : <Eye className="h-3.5 w-3.5 text-muted-foreground" />}
-              </button>
-              <button
-                onClick={() => handleCopy(credential.password!, "Senha")}
-                className="p-2 hover:bg-muted rounded-lg transition-colors shrink-0 cursor-pointer"
-              >
-                {copiedField === "Senha" ? (
-                  <Check className="h-3.5 w-3.5 text-emerald-500" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                )}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+      <FieldRow
+        label="Senha"
+        value={credential.password ? (isVisible ? credential.password : "••••••••") : null}
+        mono
+        copied={copiedField === "Senha"}
+        onCopy={credential.password ? () => handleCopy(credential.password!, "Senha") : undefined}
+        onToggleVisibility={credential.password ? onToggleVisibility : undefined}
+        visible={isVisible}
+      />
 
       {credential.notes && (
-        <div className="mt-3 pt-3 border-t border-border/50">
-          <label className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium mb-1 block">Observacoes</label>
-          <p className="text-sm text-muted-foreground leading-relaxed">{credential.notes}</p>
+        <div className="mt-4 border-t border-border/50 pt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Observacoes</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{credential.notes}</p>
         </div>
       )}
+    </div>
+  )
+}
+
+function FieldRow({
+  label,
+  value,
+  mono,
+  copied,
+  onCopy,
+  onToggleVisibility,
+  visible,
+}: {
+  label: string
+  value: string | null
+  mono?: boolean
+  copied?: boolean
+  onCopy?: () => void
+  onToggleVisibility?: () => void
+  visible?: boolean
+}) {
+  return (
+    <div className="mb-3">
+      <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
+      <div className="flex items-center gap-1.5">
+        <div
+          className={`flex min-h-[34px] flex-1 items-center rounded-xl border border-border/60 bg-muted/40 px-3 text-xs ${
+            mono ? "font-mono" : ""
+          }`}
+        >
+          {value || <span className="text-muted-foreground/50">--</span>}
+        </div>
+
+        {onToggleVisibility && (
+          <button
+            type="button"
+            onClick={onToggleVisibility}
+            className="rounded-lg border border-border/60 p-2 transition-colors hover:bg-muted"
+          >
+            {visible ? <EyeOff className="h-3.5 w-3.5 text-muted-foreground" /> : <Eye className="h-3.5 w-3.5 text-muted-foreground" />}
+          </button>
+        )}
+
+        {onCopy && (
+          <button
+            type="button"
+            onClick={onCopy}
+            className="rounded-lg border border-border/60 p-2 transition-colors hover:bg-muted"
+          >
+            {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5 text-muted-foreground" />}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function MetricCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone: "emerald" | "slate" | "violet"
+}) {
+  const toneClass =
+    tone === "slate"
+      ? "bg-slate-500/10 text-slate-700"
+      : tone === "violet"
+        ? "bg-violet-500/10 text-violet-700"
+        : "bg-emerald-500/10 text-emerald-700"
+
+  return (
+    <div className="rounded-2xl border border-white/70 bg-white/85 px-4 py-3 shadow-sm shadow-emerald-950/5">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-sm font-semibold ${toneClass}`}>{value}</p>
     </div>
   )
 }

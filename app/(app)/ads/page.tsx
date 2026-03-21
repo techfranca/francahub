@@ -75,7 +75,9 @@ export default function AdsPage() {
         })
         const data = await res.json()
         if (res.ok) {
-          toast.success(`${acc.account_name || acc.id}: ${data.campaigns_synced} campanhas sincronizadas`)
+          toast.success(
+            `${acc.account_name || acc.id}: ${data.campaigns_synced} campanhas sincronizadas, ${data.auto_linked || 0} auto-vinculadas`
+          )
         }
       } catch {
         toast.error(`Erro ao sincronizar ${acc.account_name || acc.id}`)

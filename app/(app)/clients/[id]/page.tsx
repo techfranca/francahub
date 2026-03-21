@@ -9,11 +9,11 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import {
   ArrowLeft, Edit, FolderOpen, Mail, Phone, Trash2,
-  DollarSign, Shield, StickyNote, Clock, BarChart3, Video, Sparkles,
-  FileDown, MapPin, CreditCard, Tag, Briefcase,
-  Hash, Copy, Check, ExternalLink, Calendar, Building2, User2,
-  Camera, ImagePlus, Pencil, X, Loader2, UserMinus, UserCheck, Smartphone,
-  Globe, RefreshCw
+  Shield, StickyNote, Clock, BarChart3, Video, Sparkles,
+  FileDown, MapPin, CreditCard, Tag,
+  Hash, Copy, Check, ExternalLink, Building2, User2,
+  Camera, ImagePlus, Loader2, UserMinus, UserCheck, Smartphone,
+  Globe
 } from "lucide-react"
 import { getSegmentColor } from "@/lib/constants"
 import type { HubClient, HubCredential, HubNote, HubTimelineEvent } from "@/types/database"
@@ -30,6 +30,17 @@ import { ClientWebsite } from "@/components/clients/client-website"
 import { useRealtimeTables } from "@/lib/supabase/realtime"
 import { toast } from "sonner"
 import Link from "next/link"
+
+type ClientWorkspaceTab =
+  | "timeline"
+  | "2fa"
+  | "credentials"
+  | "notes"
+  | "meetings"
+  | "ads"
+  | "insights"
+  | "creatives"
+  | "website"
 
 export default function ClientDetailPage() {
   const params = useParams()
@@ -48,6 +59,7 @@ export default function ClientDetailPage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [creatingDrive, setCreatingDrive] = useState(false)
   const [scrapingWebsite, setScrapingWebsite] = useState(false)
+  const [activeTab, setActiveTab] = useState<ClientWorkspaceTab>("timeline")
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -233,8 +245,93 @@ export default function ClientDetailPage() {
       : null
 
   const hasAddress = client.endereco || client.cidade || client.estado || client.cep
-  const hasFinancial = client.valor_servico || client.dia_pagamento || client.modelo_pagamento || client.faturamento_medio
-  const hasPersonalExtras = client.genero || client.aniversario || client.canal_venda || client.cnpj_cpf
+  const workspaceTabs: Array<{
+    value: ClientWorkspaceTab
+    label: string
+    description: string
+    icon: typeof Clock
+    iconBg: string
+    iconColor: string
+    count?: number
+  }> = [
+    {
+      value: "timeline",
+      label: "Timeline",
+      description: "Historico operacional, mudancas de perfil e eventos importantes do cliente.",
+      icon: Clock,
+      iconBg: "bg-slate-500/10",
+      iconColor: "text-slate-600",
+      count: timeline.length,
+    },
+    {
+      value: "2fa",
+      label: "2FA",
+      description: "Codigos temporarios para acessos criticos, com consulta e refresh rapido.",
+      icon: Smartphone,
+      iconBg: "bg-violet-500/10",
+      iconColor: "text-violet-600",
+    },
+    {
+      value: "credentials",
+      label: "Cofre",
+      description: "Acessos e credenciais do cliente organizados em um fluxo mais util e menos espremido.",
+      icon: Shield,
+      iconBg: "bg-emerald-500/10",
+      iconColor: "text-emerald-600",
+      count: credentials.length,
+    },
+    {
+      value: "notes",
+      label: "Notas",
+      description: "Observacoes internas, contexto rapido e lembretes para o time.",
+      icon: StickyNote,
+      iconBg: "bg-blue-500/10",
+      iconColor: "text-blue-600",
+      count: notes.length,
+    },
+    {
+      value: "meetings",
+      label: "Reunioes",
+      description: "Agenda, historico e registros das conversas mais recentes com o cliente.",
+      icon: Video,
+      iconBg: "bg-rose-500/10",
+      iconColor: "text-rose-600",
+    },
+    {
+      value: "ads",
+      label: "Ads",
+      description: "Campanhas, contas e performance centralizadas por cliente.",
+      icon: BarChart3,
+      iconBg: "bg-orange-500/10",
+      iconColor: "text-orange-600",
+    },
+    {
+      value: "insights",
+      label: "Insights",
+      description: "Leituras de IA e correlacoes para acelerar diagnostico e decisao.",
+      icon: Sparkles,
+      iconBg: "bg-amber-500/10",
+      iconColor: "text-amber-600",
+    },
+    {
+      value: "creatives",
+      label: "Criativos",
+      description: "Pecas, referencias visuais e materiais associados ao cliente.",
+      icon: Camera,
+      iconBg: "bg-fuchsia-500/10",
+      iconColor: "text-fuchsia-600",
+    },
+    {
+      value: "website",
+      label: "Sites",
+      description: "Links, contexto extraido e leitura do ecossistema digital do cliente.",
+      icon: Globe,
+      iconBg: "bg-cyan-500/10",
+      iconColor: "text-cyan-600",
+    },
+  ]
+  const activeWorkspaceTab = workspaceTabs.find((tab) => tab.value === activeTab) || workspaceTabs[0]
+  const ActiveWorkspaceIcon = activeWorkspaceTab.icon
 
   return (
     <div className="animate-fade-in">
@@ -584,129 +681,128 @@ export default function ClientDetailPage() {
       {/* ═══════════════════════════════════════════════════════════════ */}
       {/* TABS — 100% dedicated to features                              */}
       {/* ═══════════════════════════════════════════════════════════════ */}
-      <Tabs defaultValue="timeline" className="w-full">
-        <div className="bg-white rounded-2xl shadow-card p-1.5 mb-6 overflow-x-auto">
-          <TabsList className="bg-transparent rounded-xl h-11 w-full justify-start gap-1">
-            <TabsTrigger value="timeline" className="rounded-xl data-[state=active]:shadow-sm px-4 text-sm font-medium">
-              <Clock className="h-4 w-4 mr-1.5" /> Timeline
-            </TabsTrigger>
-            <TabsTrigger value="2fa" className="rounded-xl data-[state=active]:shadow-sm px-4 text-sm font-medium">
-              <Smartphone className="h-4 w-4 mr-1.5" /> 2FA
-            </TabsTrigger>
-            <TabsTrigger value="credentials" className="rounded-xl data-[state=active]:shadow-sm px-4 text-sm font-medium">
-              <Shield className="h-4 w-4 mr-1.5" /> Cofre
-              {credentials.length > 0 && (
-                <span className="ml-1.5 bg-muted text-muted-foreground text-[10px] font-semibold px-1.5 py-0.5 rounded-md">
-                  {credentials.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="notes" className="rounded-xl data-[state=active]:shadow-sm px-4 text-sm font-medium">
-              <StickyNote className="h-4 w-4 mr-1.5" /> Notas
-              {notes.length > 0 && (
-                <span className="ml-1.5 bg-muted text-muted-foreground text-[10px] font-semibold px-1.5 py-0.5 rounded-md">
-                  {notes.length}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="meetings" className="rounded-xl data-[state=active]:shadow-sm px-4 text-sm font-medium">
-              <Video className="h-4 w-4 mr-1.5" /> Reunioes
-            </TabsTrigger>
-            <TabsTrigger value="ads" className="rounded-xl data-[state=active]:shadow-sm px-4 text-sm font-medium">
-              <BarChart3 className="h-4 w-4 mr-1.5" /> Ads
-            </TabsTrigger>
-            <TabsTrigger value="insights" className="rounded-xl data-[state=active]:shadow-sm px-4 text-sm font-medium">
-              <Sparkles className="h-4 w-4 mr-1.5" /> Insights
-            </TabsTrigger>
-            <TabsTrigger value="creatives" className="rounded-xl data-[state=active]:shadow-sm px-4 text-sm font-medium">
-              <Smartphone className="h-4 w-4 mr-1.5" /> Criativos
-            </TabsTrigger>
-            <TabsTrigger value="website" className="rounded-xl data-[state=active]:shadow-sm px-4 text-sm font-medium">
-              <Globe className="h-4 w-4 mr-1.5" /> Sites
-            </TabsTrigger>
-          </TabsList>
-        </div>
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as ClientWorkspaceTab)} className="w-full">
+        <div className="overflow-hidden rounded-[28px] border border-border/60 bg-white shadow-card">
+          <div className="border-b border-border/60 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.10),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.92))] px-5 py-5 lg:px-7 lg:py-6">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted-foreground/80">
+                  Workspace do cliente
+                </p>
+                <div className="mt-3 flex items-start gap-4">
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${activeWorkspaceTab.iconBg}`}>
+                    <ActiveWorkspaceIcon className={`h-5 w-5 ${activeWorkspaceTab.iconColor}`} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold tracking-tight text-foreground">
+                      {activeWorkspaceTab.label}
+                    </h2>
+                    <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                      {activeWorkspaceTab.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
-        <TabsContent value="timeline" className="mt-0">
-          <Card className="shadow-card border-transparent">
-            <CardContent className="p-6">
+              <div className="grid gap-3 sm:grid-cols-3 xl:min-w-[360px]">
+                <div className="rounded-2xl border border-border/60 bg-white/80 px-4 py-3 backdrop-blur">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Timeline</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-tight">{timeline.length}</p>
+                </div>
+                <div className="rounded-2xl border border-border/60 bg-white/80 px-4 py-3 backdrop-blur">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Acessos</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-tight">{credentials.length}</p>
+                </div>
+                <div className="rounded-2xl border border-border/60 bg-white/80 px-4 py-3 backdrop-blur">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Notas</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-tight">{notes.length}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 overflow-x-auto">
+              <TabsList className="h-auto min-w-full justify-start gap-2 rounded-[22px] bg-white/85 p-1.5 shadow-sm shadow-emerald-950/5 ring-1 ring-border/60 backdrop-blur md:flex-wrap">
+                {workspaceTabs.map((tab) => {
+                  const TabIcon = tab.icon
+                  const isActive = activeTab === tab.value
+
+                  return (
+                    <TabsTrigger
+                      key={tab.value}
+                      value={tab.value}
+                      className={`h-auto flex-none rounded-2xl px-4 py-3 text-sm font-medium transition-all ${
+                        isActive
+                          ? "bg-foreground text-background shadow-sm"
+                          : "bg-transparent text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                      }`}
+                    >
+                      <TabIcon className="h-4 w-4" />
+                      <span>{tab.label}</span>
+                      {typeof tab.count === "number" && (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                            isActive
+                              ? "bg-white/15 text-background"
+                              : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {tab.count}
+                        </span>
+                      )}
+                    </TabsTrigger>
+                  )
+                })}
+              </TabsList>
+            </div>
+          </div>
+
+          <div className="px-5 py-5 lg:px-7 lg:py-7">
+            <TabsContent value="timeline" className="mt-0">
               <ClientTimeline events={timeline} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value="2fa" className="mt-0">
-          <Card className="shadow-card border-transparent">
-            <CardContent className="p-6">
+            <TabsContent value="2fa" className="mt-0">
               <TwoFactorVault clientId={clientId} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value="credentials" className="mt-0">
-          <Card className="shadow-card border-transparent">
-            <CardContent className="p-6">
+            <TabsContent value="credentials" className="mt-0">
               <CredentialsVault
                 credentials={credentials}
                 clientId={clientId}
                 clientSegment={client.segmento || ""}
                 onUpdate={fetchAll}
               />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value="notes" className="mt-0">
-          <Card className="shadow-card border-transparent">
-            <CardContent className="p-6">
+            <TabsContent value="notes" className="mt-0">
               <ClientNotes
                 clientId={clientId}
                 notes={notes}
                 onUpdate={fetchAll}
               />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value="meetings" className="mt-0">
-          <Card className="shadow-card border-transparent">
-            <CardContent className="p-6">
+            <TabsContent value="meetings" className="mt-0">
               <ClientMeetings clientId={clientId} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value="ads" className="mt-0">
-          <Card className="shadow-card border-transparent">
-            <CardContent className="p-6">
+            <TabsContent value="ads" className="mt-0">
               <ClientCampaigns clientId={clientId} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value="insights" className="mt-0">
-          <Card className="shadow-card border-transparent">
-            <CardContent className="p-6">
+            <TabsContent value="insights" className="mt-0">
               <ClientInsights clientId={clientId} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value="creatives" className="mt-0">
-          <Card className="shadow-card border-transparent">
-            <CardContent className="p-6">
+            <TabsContent value="creatives" className="mt-0">
               <ClientCreatives clientId={clientId} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
 
-        <TabsContent value="website" className="mt-0">
-          <Card className="shadow-card border-transparent">
-            <CardContent className="p-6">
+            <TabsContent value="website" className="mt-0">
               <ClientWebsite clientId={clientId} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </TabsContent>
+          </div>
+        </div>
       </Tabs>
 
       <ClientFormDialog
